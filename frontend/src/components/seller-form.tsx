@@ -36,7 +36,6 @@ const formSchema = z.object({
 
 // TODO: Replace with your Google Maps API key
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
-console.log(`GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}`);
 const libraries: ["places"] = ["places"];
 
 export default function SellerForm() {
@@ -67,10 +66,12 @@ export default function SellerForm() {
   });
 
   const startCamera = async () => {
+    console.log("starting camera");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      videoRef.current.srcObject = stream;
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+        console.log("setting isCameraActive to true");
         setIsCameraActive(true);
       }
     } catch (err) {
@@ -206,31 +207,29 @@ export default function SellerForm() {
           </div>
         )}
 
-        {isCameraActive && (
-          <div className="space-y-4">
-            <div className="relative">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                className="w-full rounded-md border border-input"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="absolute top-2 right-2"
-                onClick={stopCamera}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <Button type="button" onClick={captureImage} className="w-full">
-              Capture Photo
+        <div className={`space-y-4 ${isCameraActive ? "block" : "hidden"}`}>
+          <div className="relative">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              className="w-full rounded-md border border-input"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="absolute top-2 right-2"
+              onClick={stopCamera}
+            >
+              <X className="h-4 w-4" />
             </Button>
-            <canvas ref={canvasRef} className="hidden" />
           </div>
-        )}
+          <Button type="button" onClick={captureImage} className="w-full">
+            Capture Photo
+          </Button>
+          <canvas ref={canvasRef} className="hidden" />
+        </div>
 
         {image && (
           <div className="relative">
