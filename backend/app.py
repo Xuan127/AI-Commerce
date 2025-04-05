@@ -10,8 +10,30 @@ from supabase import create_client
 
 
 class RelevanceScore(BaseModel):
-                relevance_score: int
-                
+    relevance_score: int
+
+class RelevanceScoreWithUser(RelevanceScore):
+    user_id: int
+    username: str
+
+async def get_relevance_score(listing, buyer) -> RelevanceScoreWithUser:
+    openai = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+    task = openai.beta.chat.completions.parse(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a recommendation system that rates how relevant items are to users based on their preferences. Return a relevance score from 1-10, where 1 is least relevant and 10 is most relevant."},
+            {"role": "user", "content": f"Rate how relevant this listing is to the user's preferences:\nListing: {listing}\nUser preferences: {buyer}"},
+        ],
+        response_format=RelevanceScore,
+    )
+    result = task.choices[0].message.parsed
+    formatted_result = RelevanceScoreWithUser(
+        relevance_score=result.relevance_score,
+        user_id=buyer.get('id'),
+        username=buyer.get('username')
+    )
+    return formatted_result
+               
 def create_app():
     app = Flask(__name__)
 
@@ -22,7 +44,7 @@ def create_app():
     url = os.environ.get("SUPBASE_URL")
     key = os.environ.get("SUPBASE_KEY")
     supabase = create_client(url, key)
-    openAIClient = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+    openai = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
     # Enable CORS
     CORS(app)
@@ -44,39 +66,14 @@ def create_app():
     async def push_listing(merchant_id):
         buyers = supabase.table('users').select('id, username, preferences').execute()
         listings = supabase.table('listings').select('*').eq('user_id', merchant_id).execute()
-
-        tasks = []
-        # for each listing, find relevant buyers
-        for listing in listings.data:
-            for buyer in buyers.data:
-                task = openAIClient.beta.chat.completions.parse(
-                    model="gpt-4.5-preview",
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "You are a recommendation system that rates how relevant items are to users based on their preferences. Return a relevance score from 1-10, where 1 is least relevant and 10 is most relevant."
-                        },
-                        {
-                            "role": "user", 
-                            "content": f"Rate how relevant this listing is to the user's preferences:\nListing: {listing}\nUser preferences: {buyer['preferences']}"
-                        }
-                    ],
-                    response_format=RelevanceScore,
-                )
-                tasks.append((task, buyer['id'], buyer['username']))
-            
-        # Execute all tasks concurrently and wait for results
-        responses = await asyncio.gather(*[task[0] for task in tasks])
+        tasks = [get_relevance_score(listing, buyer) for listing in listings.data for buyer in buyers.data]
+        responses = await asyncio.gather(*tasks)
         
-        # Process results
-        for (response, task) in zip(responses, tasks):
-            print({
-                'user_id': task[1],
-                'username': task[2],
-                'relevance_score': response.choices[0].message.parsed
-            })
-
-        return listings.data
+        # do something with the potential buyers later
+        print(responses)
+        
+        # Placeholder response
+        return { "message": "Listings pushed successfully" }
 
     return app
 
