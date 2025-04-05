@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 
 // Temporary mock data for listings
@@ -33,7 +33,17 @@ const mockListings = [
 ];
 
 export default function BuyerPage() {
-  const [listings] = useState(mockListings);
+  const [listings, setListings] = useState(mockListings);
+
+  useEffect(() => {
+    const fetchListings = async () => {
+      const response = await fetch("http://127.0.0.1:8000/listings");
+      const data = await response.json();
+      console.log(data);
+      setListings(data);
+    };
+    fetchListings();
+  }, []);
 
   return (
     <main className="mx-auto px-4 py-8">
