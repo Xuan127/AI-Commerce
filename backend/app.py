@@ -1,20 +1,11 @@
 from flask import Flask
 from flask_cors import CORS
 
-from config import config
-from routes import register_routes
-
-def create_app(config_name='development'):
+def create_app():
     app = Flask(__name__)
-
-    # Load configuration
-    app.config.from_object(config[config_name])
 
     # Enable CORS
     CORS(app)
-
-    # Register all routes
-    register_routes(app)
 
     # Example route (you can also move this to routes.py)
     @app.route('/')
