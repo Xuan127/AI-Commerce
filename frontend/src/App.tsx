@@ -1,10 +1,17 @@
-import SellerForm from "@/components/seller-form";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Layout from "@/components/Layout";
+import BuyerPage from "@/pages/BuyerPage";
+import SellerPage from "@/pages/SellerPage";
 
-export default function Home() {
+export default function App() {
   return (
-    <main className="container mx-auto px-4 py-8 max-w-2xl">
-      <h1 className="text-3xl font-bold mb-6 text-center">Sell Your Item</h1>
-      <SellerForm />
-    </main>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<BuyerPage />} />
+          <Route path="sell" element={<SellerPage />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }
