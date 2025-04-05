@@ -11,4 +11,10 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  define: {
+    // Make environment variables available to the client
+    "process.env.GOOGLE_MAPS_API_KEY": JSON.stringify(
+      process.env.GOOGLE_MAPS_API_KEY
+    ),
+  },
 });
