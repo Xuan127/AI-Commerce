@@ -26,7 +26,7 @@ const formSchema = z.object({
   title: z.string().min(3, { message: "Title must be at least 3 characters" }),
   description: z
     .string()
-    .min(10, { message: "Description must be at least 10 characters" }),
+    .min(5, { message: "Description must be at least 5 characters" }),
   price: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
     message: "Price must be a positive number",
   }),
@@ -58,11 +58,7 @@ export default function SellerForm() {
       }
     } catch (err) {
       console.error("Error accessing camera:", err);
-      toast({
-        title: "Camera Error",
-        description: "Could not access your camera. Please check permissions.",
-        variant: "destructive",
-      });
+      toast("Camera Error");
     }
   };
 
@@ -123,33 +119,27 @@ export default function SellerForm() {
 
     try {
       // Send data to your API
-      const response = await fetch("/api/listings", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(listingData),
-      });
+      console.log(`here is the form data: ${JSON.stringify(listingData)}`);
+      // const response = await fetch("/api/listings", {
+      //   method: "POST",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //   },
+      //   body: JSON.stringify(listingData),
+      // });
 
-      if (response.ok) {
-        toast({
-          title: "Success!",
-          description: "Your item has been listed for sale",
-        });
+      // if (response.ok) {
+      //   toast("Success! Your item has been listed for sale");
 
-        // Reset form
-        form.reset();
-        setImage(null);
-      } else {
-        throw new Error("Failed to submit listing");
-      }
+      //   // Reset form
+      //   form.reset();
+      //   setImage(null);
+      // } else {
+      //   throw new Error("Failed to submit listing");
+      // }
     } catch (error) {
       console.error("Error submitting form:", error);
-      toast({
-        title: "Submission Failed",
-        description: "There was a problem listing your item. Please try again.",
-        variant: "destructive",
-      });
+      toast("Submission Failed D:");
     }
   };
 
@@ -226,10 +216,10 @@ export default function SellerForm() {
                   type="button"
                   variant="outline"
                   size="icon"
-                  className="absolute top-2 right-2"
+                  className="absolute top-2 right-2 bg-stone-50"
                   onClick={removeImage}
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-4 w-4 text-stone-50" />
                 </Button>
               </div>
             )}
