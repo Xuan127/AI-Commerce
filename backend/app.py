@@ -1,12 +1,16 @@
 import asyncio
 import os
+import json
 
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from openai import OpenAI
 from pydantic import BaseModel
 from supabase import create_client
+
+from image_to_listing import image_to_listing
+from supabase_functions import insert_to_supabase
 
 
 class RelevanceScore(BaseModel):
@@ -19,8 +23,8 @@ def create_app():
     load_dotenv()
 
     # Initialize Supabase client
-    url = os.environ.get("SUPBASE_URL")
-    key = os.environ.get("SUPBASE_KEY")
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_KEY")
     supabase = create_client(url, key)
     openAIClient = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
@@ -38,6 +42,50 @@ def create_app():
         # Get all listings from the database
         listings = supabase.table('listings').select('*').execute()
         return listings.data
+    
+    # Create listing from image
+    @app.route('/create-listing-from-image', methods=['POST'])
+    def create_listing_from_image():
+        if not request.is_json:
+            return jsonify({"error": "Request must be JSON"}), 400
+            
+        data = request.get_json()
+        
+        # Check if base64_image is in the request
+        if 'base64_image' not in data:
+            return jsonify({"error": "base64_image is required"}), 400
+            
+        base64_image = data['base64_image']
+        
+        # Process image to generate listing details
+        listing_json = image_to_listing(base64_image)
+        
+        if not listing_json:
+            return jsonify({"error": "Failed to generate listing from image"}), 500
+            
+        # Parse the JSON string returned by image_to_listing
+        listing_data = json.loads(listing_json)
+
+        # Remove id field if it exists to let Supabase auto-generate it
+        if "id" in listing_data:
+            print(f"Removing id field: {listing_data['id']}")
+            del listing_data["id"]
+        
+        # Set user_id to 1 regardless of what OpenAI returns
+        listing_data["user_id"] = 1
+        
+        # Add the image encoding to the listing data
+        listing_data["image_encoding"] = base64_image
+        
+        # Insert the new listing into Supabase
+        try:
+            response = insert_to_supabase('listings', listing_data)
+            return jsonify({
+                "message": "Listing created successfully",
+                "data": response.data
+            }), 201
+        except Exception as e:
+            return jsonify({"error": f"Failed to create listing: {str(e)}"}), 500
     
     # Push all listings for a merchant
     @app.route('/merchants/<merchant_id>/push-listings', methods=['POST'])
