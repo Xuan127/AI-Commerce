@@ -1,19 +1,18 @@
 import asyncio
-import os
 import json
+import os
 
+import requests
+import stripe
 from dotenv import load_dotenv
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
+from image_to_listing import image_to_listing
+from image_to_listing_v2 import image_to_listing as image_to_listing_v2
 from openai import OpenAI
 from pydantic import BaseModel
 from supabase import create_client
-
-from image_to_listing import image_to_listing
-from image_to_listing_v2 import image_to_listing as image_to_listing_v2
 from supabase_functions import insert_to_supabase
-
-import requests
 
 
 class RelevanceScore(BaseModel):
@@ -62,7 +61,9 @@ def create_app():
     print(f"URL: {url}")
     print(f"KEY: {key}")
     supabase = create_client(url, key)
-    openai = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+    # Initialize Stripe client
+    stripe.api_key = os.environ.get("STRIPE_API_KEY")
 
     # Enable CORS
     CORS(app)
@@ -115,13 +116,28 @@ def create_app():
 
         # Insert the new listing into Supabase
         try:
-            response = insert_to_supabase("listings", listing_data)
-            return (
-                jsonify(
-                    {"message": "Listing created successfully", "data": response.data}
-                ),
-                201,
+            response = insert_to_supabase('listings', listing_data)
+            product = stripe.Product.create(name=listing_data["title"])
+            price = stripe.Price.create(
+                product=product.id,
+                unit_amount=listing_data["price"],
+                currency="usd"
             )
+            payment_link = stripe.PaymentLink.create(
+                line_items=[{
+                    "price": price.id,
+                    "quantity": 1
+                }]
+            )
+            return jsonify({
+                "message": "Listing created successfully",
+                "data": {
+                    **response.data,
+                    "stripe_product": product,
+                    "stripe_price": price,
+                    "stripe_payment_link": payment_link.url
+                }
+            }), 201
         except Exception as e:
             return jsonify({"error": f"Failed to create listing: {str(e)}"}), 500
 
@@ -166,6 +182,42 @@ def create_app():
         except requests.exceptions.RequestException as e:
             return jsonify({"error": f"Failed to create realtime key: {str(e)}"}), 500
 
+    # takes in a price id and returns a new price and payment link
+    @app.route("/tools/update-price", methods=["POST"])
+    def update_price():
+        # Get data from request
+        if not request.is_json:
+            return jsonify({"error": "Request must be JSON"}), 400
+
+        listing_data = request.get_json()
+
+        # Check required fields
+        if "product_id" not in listing_data or "price" not in listing_data:
+            return jsonify({"error": "product_id and price are required"}), 400
+        
+        product_id = listing_data["product_id"]
+        price = listing_data["price"]
+        
+        new_price = stripe.Price.create(
+            product=product_id,
+            unit_amount=price,
+            currency="usd"
+        )
+        payment_link = stripe.PaymentLink.create(
+            line_items=[{
+                "price": new_price.id,
+                "quantity": 1
+            }]
+        )
+        return jsonify({
+            "message": "Price updated successfully",
+            "data": {
+                "product_id": product_id,
+                "price": new_price,
+                "payment_link": payment_link.url
+            }
+        }), 200
+    
     # Create listing from image using v2 implementation
     @app.route("/image-to-products", methods=["POST"])
     def image_to_products():
