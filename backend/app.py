@@ -182,6 +182,42 @@ def create_app():
         except requests.exceptions.RequestException as e:
             return jsonify({"error": f"Failed to create realtime key: {str(e)}"}), 500
 
+    # takes in a price id and returns a new price and payment link
+    @app.route("/tools/update-price", methods=["POST"])
+    def update_price():
+        # Get data from request
+        if not request.is_json:
+            return jsonify({"error": "Request must be JSON"}), 400
+
+        listing_data = request.get_json()
+
+        # Check required fields
+        if "product_id" not in listing_data or "price" not in listing_data:
+            return jsonify({"error": "product_id and price are required"}), 400
+        
+        product_id = listing_data["product_id"]
+        price = listing_data["price"]
+        
+        new_price = stripe.Price.create(
+            product=product_id,
+            unit_amount=price,
+            currency="usd"
+        )
+        payment_link = stripe.PaymentLink.create(
+            line_items=[{
+                "price": new_price.id,
+                "quantity": 1
+            }]
+        )
+        return jsonify({
+            "message": "Price updated successfully",
+            "data": {
+                "product_id": product_id,
+                "price": new_price,
+                "payment_link": payment_link.url
+            }
+        }), 200
+    
     # Create listing from image using v2 implementation
     @app.route("/image-to-products", methods=["POST"])
     def image_to_products():
