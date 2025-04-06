@@ -47,7 +47,7 @@ export default function BuyerPage() {
             type: "session.update",
             session: {
               instructions:
-                "You are a helpful shop assistant named 'Jeff' that can help the user buy items from the following list at a garage sale: " +
+                "You are a chill shop assistant named 'Jeff' that can help the user buy items from the following list at a garage sale: " +
                 "2. A pair of jeans for $50" +
                 "3. A pair of socks for $10" +
                 "4. A pair of underwear for $5" +
@@ -103,17 +103,20 @@ export default function BuyerPage() {
             console.log("the server event is a response.done");
             serverEvent.response.output.forEach((outputItem: any) => {
               console.log(outputItem);
-              // if (
-              //   outputItem.type === "function_call" &&
-              //   outputItem.name &&
-              //   outputItem.arguments
-              // ) {
-              // handleFunctionCall({
-              //   name: outputItem.name,
-              //   call_id: outputItem.call_id,
-              //   arguments: outputItem.arguments,
-              // });
-              // }
+              if (
+                outputItem.type === "function_call" &&
+                outputItem.name &&
+                outputItem.arguments
+              ) {
+                console.log("the function call is a function_call");
+                console.log(outputItem.name);
+                console.log(outputItem.arguments);
+                // handleFunctionCall({
+                //   name: outputItem.name,
+                //   call_id: outputItem.call_id,
+                //   arguments: outputItem.arguments,
+                // });
+              }
             });
           }
         });
