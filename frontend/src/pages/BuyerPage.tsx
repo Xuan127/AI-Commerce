@@ -41,10 +41,26 @@ export default function BuyerPage() {
 
         // Set up data channel for sending and receiving events
         const dc = pc.createDataChannel("oai-events");
+        dc.onmessage = async (event) => {
+          const message_text = [];
+          const messageData = JSON.parse(event.data);
+          if (
+            messageData.type === "response.done" &&
+            messageData.response?.output?.[0]?.content?.[0]?.transcript
+          ) {
+            console.log(
+              "Transcript:",
+              messageData.response.output[0].content[0].transcript
+            );
+          }
+          for (let i = 0; i < event.data.content.length; i++) {
+            message_text.push(event.data.content[i]);
+          }
+        };
         dataChannelRef.current = dc;
         dc.addEventListener("message", (e) => {
           // Handle realtime server events here
-          console.log("Received message:", e);
+          console.log("received message from server events");
         });
 
         // Start the session using SDP
