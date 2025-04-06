@@ -36,13 +36,12 @@ export default function BuyerPage() {
   const [listings, setListings] = useState(mockListings);
 
   useEffect(() => {
-    const fetchListings = async () => {
-      const response = await fetch("http://127.0.0.1:8000/listings");
+    const connectRealtimeApi = async () => {
+      const response = await fetch("http://127.0.0.1:8000/create-realtime-key");
       const data = await response.json();
       console.log(data);
-      setListings(data);
     };
-    fetchListings();
+    connectRealtimeApi();
   }, []);
 
   return (
