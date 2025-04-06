@@ -13,6 +13,7 @@ from openai import OpenAI
 from pydantic import BaseModel
 from supabase import create_client
 from supabase_functions import insert_to_supabase
+from qr_generator import generate_qr_code  # Assuming you have a module for QR code generation
 
 
 class RelevanceScore(BaseModel):
@@ -129,13 +130,16 @@ def create_app():
                     "quantity": 1
                 }]
             )
+            qr_code = generate_qr_code(payment_link.url)  # Generate QR code for the payment link
+
             return jsonify({
                 "message": "Listing created successfully",
                 "data": {
                     **response.data,
                     "stripe_product": product,
                     "stripe_price": price,
-                    "stripe_payment_link": payment_link.url
+                    "stripe_payment_link": payment_link.url,
+                    "qr_code_encodings": qr_code  # Include the QR code in the response
                 }
             }), 201
         except Exception as e:
