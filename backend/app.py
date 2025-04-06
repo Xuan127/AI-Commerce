@@ -54,7 +54,7 @@ def create_app():
     app = Flask(__name__)
 
     # Load environment variables
-    load_dotenv()
+    load_dotenv(override=True)
 
     # Initialize Supabase client
     url = os.environ.get("SUPABASE_URL")
@@ -146,7 +146,7 @@ def create_app():
         return {"message": "Listings pushed successfully"}
 
     @app.route("/create-realtime-key", methods=["GET"])
-    async def create_realtime_key():
+    def create_realtime_key():
         headers = {
             "Authorization": f"Bearer {os.environ.get('OPENAI_API_KEY')}",
             "Content-Type": "application/json",
