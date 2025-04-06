@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from supabase import create_client
 
 from image_to_listing import image_to_listing
+from image_to_listing_v2 import image_to_listing as image_to_listing_v2
 from supabase_functions import insert_to_supabase
 
 import requests
@@ -164,6 +165,29 @@ def create_app():
             return jsonify(response.json()), 200
         except requests.exceptions.RequestException as e:
             return jsonify({"error": f"Failed to create realtime key: {str(e)}"}), 500
+
+    # Create listing from image using v2 implementation
+    @app.route("/image-to-products", methods=["POST"])
+    def image_to_products():
+        if not request.is_json:
+            return jsonify({"error": "Request must be JSON"}), 400
+
+        data = request.get_json()
+
+        # Check if base64_image is in the request
+        if "base64_image" not in data:
+            return jsonify({"error": "base64_image is required"}), 400
+
+        base64_image = data["base64_image"]
+
+        # Process image to generate product details using v2 implementation
+        result_json = image_to_listing_v2(base64_image)
+
+        if not result_json:
+            return jsonify({"error": "Failed to analyze image"}), 500
+
+        # Return the JSON response directly
+        return jsonify(json.loads(result_json)), 200
 
     return app
 
