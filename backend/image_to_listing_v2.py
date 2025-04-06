@@ -24,19 +24,12 @@ def image_to_listing(base64_image):
                         { 
                             "type": "text", 
                             "text": """Analyze this image and identify the products shown.
-                            Create a list of objects, where each object represents a product with the following JSON format:
-                            [
-                                {
-                                    "name": "Product name",
-                                    "min_price": 80,
-                                    "max_price": 120
-                                },
-                                {
-                                    "name": "Second product (if present)",
-                                    "min_price": 40,
-                                    "max_price": 60
-                                }
-                            ]
+                            Create a product listing, with the following JSON format:
+                            {
+                                "name": "Product name",
+                                "min_price": 80,
+                                "max_price": 120
+                            },
                             Include all identifiable products in the image."""
                         },
                         {
