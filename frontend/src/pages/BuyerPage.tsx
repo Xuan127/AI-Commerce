@@ -5,6 +5,28 @@ export default function BuyerPage() {
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [speakingSessionActive, setSpeakingSessionActive] = useState(false);
+  const [userMessage, setUserMessage] = useState("");
+
+  // Function to send a text message to the agent
+  const sendMessageToAgent = (messageText: string) => {
+    if (dataChannelRef.current?.readyState === "open") {
+      const userMessage = {
+        type: "conversation.item.create",
+        item: {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: messageText,
+            },
+          ],
+        },
+      };
+      dataChannelRef.current.send(JSON.stringify(userMessage));
+    } else {
+      console.error("Data channel is not open");
+    }
+  };
 
   const activateSpeakingSession = async () => {
     // Create an audio element for playback
@@ -61,6 +83,26 @@ export default function BuyerPage() {
         dc.addEventListener("message", (e) => {
           // Handle realtime server events here
           console.log("received message from server events");
+          console.log(e);
+          const serverEvent = JSON.parse(e.data);
+          console.log(serverEvent.type);
+          if (serverEvent.type == "response.done") {
+            console.log("the server event is a response.done");
+            serverEvent.response.output.forEach((outputItem: any) => {
+              console.log(outputItem);
+              // if (
+              //   outputItem.type === "function_call" &&
+              //   outputItem.name &&
+              //   outputItem.arguments
+              // ) {
+              // handleFunctionCall({
+              //   name: outputItem.name,
+              //   call_id: outputItem.call_id,
+              //   arguments: outputItem.arguments,
+              // });
+              // }
+            });
+          }
         });
 
         // Start the session using SDP
@@ -83,6 +125,43 @@ export default function BuyerPage() {
           sdp: await sdpResponse.text(),
         };
         await pc.setRemoteDescription(answer);
+
+        const systemMessage = {
+          type: "session.update",
+          session: {
+            instructions:
+              "You are an AI shopping assistant for an e-commerce platform. Help users find products, answer questions about item specifications, assist with the checkout process, and provide personalized recommendations based on user preferences. If users want to purchase an item, use the stripe_function to generate a payment link. Be friendly, professional, and knowledgeable about common consumer products.",
+            voice: "alloy",
+            tools: [
+              {
+                type: "function",
+                function: {
+                  name: "stripe_function",
+                  description:
+                    "use stripe to generate a payment link for the user",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      price: {
+                        type: "number",
+                        description: "the price of the item",
+                      },
+                    },
+                    required: ["price"],
+                    additionalProperties: false,
+                  },
+                  strict: true,
+                },
+              },
+            ],
+            tool_choice: "auto",
+            input_audio_transcription: { model: "whisper-1" },
+            temperature: 0.5,
+          },
+        };
+
+        // Send the system message to the agent
+        dc.send(JSON.stringify(systemMessage));
 
         console.log("Realtime connection established successfully");
       } catch (error) {
@@ -108,14 +187,38 @@ export default function BuyerPage() {
       <h1 className="text-3xl font-bold mb-6 text-center">Browse Items</h1>
 
       {speakingSessionActive ? (
-        <button
-          onClick={() => {
-            setSpeakingSessionActive(false);
-            cleanupSpeakingSession();
-          }}
-        >
-          <div>Speaking session active, press to stop</div>
-        </button>
+        <div className="flex flex-col gap-4">
+          <button
+            onClick={() => {
+              setSpeakingSessionActive(false);
+              cleanupSpeakingSession();
+            }}
+            className="bg-red-500 text-white px-4 py-2 rounded-md"
+          >
+            <div>Speaking session active, press to stop</div>
+          </button>
+
+          <div className="flex gap-2 mt-4">
+            <input
+              type="text"
+              value={userMessage}
+              onChange={(e) => setUserMessage(e.target.value)}
+              placeholder="Type a message to the agent..."
+              className="border border-gray-300 rounded-md px-3 py-2 flex-grow"
+            />
+            <button
+              onClick={() => {
+                if (userMessage.trim()) {
+                  sendMessageToAgent(userMessage);
+                  setUserMessage("");
+                }
+              }}
+              className="bg-blue-500 text-white px-4 py-2 rounded-md"
+            >
+              Send
+            </button>
+          </div>
+        </div>
       ) : (
         <button
           onClick={async () => {
